@@ -3,53 +3,59 @@
 import { useState, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { deletePlayer } from "./actions";
+import { deleteCaster } from "./actions";
 
-type Player = {
+type Caster = {
   id: string;
   nickname: string;
   real_name: string | null;
   city: string | null;
   bio: string | null;
   is_verified: boolean;
-  is_claimed: boolean;
+  is_live: boolean;
+  twitch_url: string | null;
+  youtube_url: string | null;
   telegram_username: string | null;
-  games: string[] | null;
-  created_at: string;
+  games: string[];
+  broadcasts_count: number;
+  subscribers_count: number;
+  rating: number;
 };
 
 type Props = {
-  players: Player[];
+  casters: Caster[];
 };
 
-export default function PlayersTable({ players }: Props) {
+export default function CastersTable({ casters }: Props) {
   const router = useRouter();
   const [search, setSearch] = useState("");
-  const [gameFilter, setGameFilter] = useState<"all" | "CS 1.6" | "Dota Allstars">("all");
+  const [filter, setFilter] = useState<"all" | "CS 1.6" | "Dota Allstars" | "live">("all");
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  const filteredPlayers = useMemo(() => {
-    return players.filter((player) => {
+  const filteredCasters = useMemo(() => {
+    return casters.filter((caster) => {
       const matchesSearch =
         search === "" ||
-        player.nickname.toLowerCase().includes(search.toLowerCase()) ||
-        (player.real_name?.toLowerCase().includes(search.toLowerCase()) ?? false) ||
-        (player.telegram_username?.toLowerCase().includes(search.toLowerCase()) ?? false);
+        caster.nickname.toLowerCase().includes(search.toLowerCase()) ||
+        (caster.real_name?.toLowerCase().includes(search.toLowerCase()) ?? false);
 
-      const matchesGame =
-        gameFilter === "all" ||
-        (player.games && player.games.includes(gameFilter));
+      let matchesFilter = true;
+      if (filter === "live") {
+        matchesFilter = caster.is_live;
+      } else if (filter !== "all") {
+        matchesFilter = caster.games.includes(filter);
+      }
 
-      return matchesSearch && matchesGame;
+      return matchesSearch && matchesFilter;
     });
-  }, [players, search, gameFilter]);
+  }, [casters, search, filter]);
 
   const handleDelete = async () => {
     if (!deleteId) return;
     setDeleting(true);
 
-    const result = await deletePlayer(deleteId);
+    const result = await deleteCaster(deleteId);
 
     if (result && "error" in result) {
       alert("Xatolik: " + result.error);
@@ -62,7 +68,7 @@ export default function PlayersTable({ players }: Props) {
     router.refresh();
   };
 
-  const playerToDelete = players.find((p) => p.id === deleteId);
+  const casterToDelete = casters.find((c) => c.id === deleteId);
 
   return (
     <>
@@ -71,39 +77,46 @@ export default function PlayersTable({ players }: Props) {
           <div className="flex-1">
             <input
               type="text"
-              placeholder="🔍 Nick, ism yoki Telegram bo'yicha qidiring..."
+              placeholder="🔍 Caster nomi yoki ism bo'yicha qidiring..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full bg-[#0A0E1A] border border-white/10 focus:border-[#FF6B35] rounded-md px-4 py-2 text-white placeholder-[#5A6178] outline-none transition-colors"
             />
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <FilterButton
-              active={gameFilter === "all"}
-              onClick={() => setGameFilter("all")}
+              active={filter === "all"}
+              onClick={() => setFilter("all")}
               label="Hammasi"
-              count={players.length}
+              count={casters.length}
             />
             <FilterButton
-              active={gameFilter === "CS 1.6"}
-              onClick={() => setGameFilter("CS 1.6")}
+              active={filter === "live"}
+              onClick={() => setFilter("live")}
+              label="🔴 LIVE"
+              count={casters.filter((c) => c.is_live).length}
+              color="#FF3D71"
+            />
+            <FilterButton
+              active={filter === "CS 1.6"}
+              onClick={() => setFilter("CS 1.6")}
               label="🎯 CS 1.6"
-              count={players.filter((p) => p.games?.includes("CS 1.6")).length}
+              count={casters.filter((c) => c.games.includes("CS 1.6")).length}
               color="#FF6B35"
             />
             <FilterButton
-              active={gameFilter === "Dota Allstars"}
-              onClick={() => setGameFilter("Dota Allstars")}
+              active={filter === "Dota Allstars"}
+              onClick={() => setFilter("Dota Allstars")}
               label="⚔️ Dota"
-              count={players.filter((p) => p.games?.includes("Dota Allstars")).length}
+              count={casters.filter((c) => c.games.includes("Dota Allstars")).length}
               color="#00D9FF"
             />
           </div>
         </div>
       </div>
 
-      {filteredPlayers.length === 0 ? (
+      {filteredCasters.length === 0 ? (
         <div className="bg-[#131929] border border-white/10 rounded-xl p-12 text-center">
           <div className="text-5xl mb-4">🔍</div>
           <h3 className="text-xl font-bold mb-2">Hech narsa topilmadi</h3>
@@ -115,64 +128,80 @@ export default function PlayersTable({ players }: Props) {
             <table className="w-full">
               <thead className="bg-[#0A0E1A] border-b border-white/10">
                 <tr>
-                  <th className="text-left text-xs uppercase text-[#8B92A8] font-medium px-4 py-3">O&apos;yinchi</th>
-                  <th className="text-left text-xs uppercase text-[#8B92A8] font-medium px-4 py-3 hidden md:table-cell">Telegram</th>
-                  <th className="text-left text-xs uppercase text-[#8B92A8] font-medium px-4 py-3 hidden lg:table-cell">Shahar</th>
+                  <th className="text-left text-xs uppercase text-[#8B92A8] font-medium px-4 py-3">Caster</th>
+                  <th className="text-left text-xs uppercase text-[#8B92A8] font-medium px-4 py-3 hidden md:table-cell">Stream</th>
                   <th className="text-left text-xs uppercase text-[#8B92A8] font-medium px-4 py-3 hidden lg:table-cell">O&apos;yinlar</th>
+                  <th className="text-left text-xs uppercase text-[#8B92A8] font-medium px-4 py-3 hidden lg:table-cell">Statistika</th>
                   <th className="text-left text-xs uppercase text-[#8B92A8] font-medium px-4 py-3 hidden md:table-cell">Holat</th>
                   <th className="text-right text-xs uppercase text-[#8B92A8] font-medium px-4 py-3">Amallar</th>
                 </tr>
               </thead>
               <tbody>
-                {filteredPlayers.map((player) => {
-                  const primaryGame = player.games?.[0] || "CS 1.6";
+                {filteredCasters.map((caster) => {
+                  const primaryGame = caster.games[0] || "CS 1.6";
                   const isPrimaryCS = primaryGame === "CS 1.6";
                   const primaryColor = isPrimaryCS ? "#FF6B35" : "#00D9FF";
 
                   return (
-                    <tr key={player.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                    <tr key={caster.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-3">
-                          <div
-                            className="w-10 h-10 rounded-full bg-[#0A0E1A] border-2 flex items-center justify-center font-bold text-sm shrink-0"
-                            style={{ borderColor: primaryColor, color: primaryColor }}
-                          >
-                            {player.nickname.substring(0, 2).toUpperCase()}
+                          <div className="relative shrink-0">
+                            <div
+                              className="w-10 h-10 rounded-full bg-[#0A0E1A] border-2 flex items-center justify-center font-bold text-sm"
+                              style={{ borderColor: primaryColor, color: primaryColor }}
+                            >
+                              {caster.nickname.substring(0, 2).toUpperCase()}
+                            </div>
+                            {caster.is_live && (
+                              <div className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-[#FF3D71] border-2 border-[#131929] rounded-full animate-pulse"></div>
+                            )}
                           </div>
                           <div className="min-w-0">
                             <div className="flex items-center gap-2">
-                              <span className="font-bold">{player.nickname}</span>
-                              {player.is_verified && (
+                              <span className="font-bold">{caster.nickname}</span>
+                              {caster.is_verified && (
                                 <span className="text-green-400 text-xs">✓</span>
                               )}
                             </div>
-                            {player.real_name && (
-                              <div className="text-xs text-[#8B92A8]">{player.real_name}</div>
+                            {caster.real_name && (
+                              <div className="text-xs text-[#8B92A8]">{caster.real_name}</div>
                             )}
                           </div>
                         </div>
                       </td>
                       <td className="px-4 py-3 hidden md:table-cell">
-                        {player.telegram_username ? (
-                          <a
-                            href={"https://t.me/" + player.telegram_username}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 text-sm text-[#00D9FF] hover:underline"
-                          >
-                            <span>📱</span>
-                            <span>@{player.telegram_username}</span>
-                          </a>
-                        ) : (
-                          <span className="text-sm text-[#5A6178]">—</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 hidden lg:table-cell text-sm text-[#8B92A8]">
-                        {player.city || "—"}
+                        <div className="flex gap-2">
+                          {caster.twitch_url && (
+                            <a
+                              href={caster.twitch_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              title="Twitch"
+                              className="text-purple-400 hover:text-purple-300 transition-colors"
+                            >
+                              <span className="text-lg">📺</span>
+                            </a>
+                          )}
+                          {caster.youtube_url && (
+                            <a
+                              href={caster.youtube_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              title="YouTube"
+                              className="text-red-400 hover:text-red-300 transition-colors"
+                            >
+                              <span className="text-lg">▶️</span>
+                            </a>
+                          )}
+                          {!caster.twitch_url && !caster.youtube_url && (
+                            <span className="text-sm text-[#5A6178]">—</span>
+                          )}
+                        </div>
                       </td>
                       <td className="px-4 py-3 hidden lg:table-cell">
                         <div className="flex gap-1 flex-wrap">
-                          {player.games?.map((g) => (
+                          {caster.games.map((g) => (
                             <span
                               key={g}
                               className="text-xs px-2 py-0.5 rounded-md"
@@ -189,27 +218,43 @@ export default function PlayersTable({ players }: Props) {
                           ))}
                         </div>
                       </td>
+                      <td className="px-4 py-3 hidden lg:table-cell">
+                        <div className="text-xs space-y-0.5">
+                          <div className="text-[#8B92A8]">
+                            📡 {caster.broadcasts_count} translyatsiya
+                          </div>
+                          <div className="text-[#8B92A8]">
+                            👥 {caster.subscribers_count.toLocaleString()} obunachi
+                          </div>
+                          <div className="text-[#FF6B35] font-bold">
+                            ⭐ {caster.rating.toFixed(1)}
+                          </div>
+                        </div>
+                      </td>
                       <td className="px-4 py-3 hidden md:table-cell">
-                        {player.is_verified ? (
-                          <span className="bg-green-500/20 text-green-400 text-xs px-2 py-1 rounded-md">
-                            Tasdiqlangan
-                          </span>
-                        ) : (
-                          <span className="bg-yellow-500/20 text-yellow-400 text-xs px-2 py-1 rounded-md">
-                            Kutilmoqda
-                          </span>
-                        )}
+                        <div className="space-y-1">
+                          {caster.is_live ? (
+                            <span className="bg-red-500/20 text-red-300 text-xs px-2 py-1 rounded-md inline-flex items-center gap-1">
+                              <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse"></span>
+                              LIVE
+                            </span>
+                          ) : (
+                            <span className="bg-white/5 text-[#8B92A8] text-xs px-2 py-1 rounded-md">
+                              Offline
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="px-4 py-3 text-right">
                         <div className="flex justify-end gap-2">
                           <Link
-                            href={"/admin/players/" + player.id + "/edit"}
+                            href={"/admin/casters/" + caster.id + "/edit"}
                             className="bg-[#00D9FF]/10 hover:bg-[#00D9FF]/20 border border-[#00D9FF]/30 text-[#00D9FF] text-xs px-3 py-1.5 rounded-md transition-colors"
                           >
                             ✏️ Tahrirlash
                           </Link>
                           <button
-                            onClick={() => setDeleteId(player.id)}
+                            onClick={() => setDeleteId(caster.id)}
                             className="bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-300 text-xs px-3 py-1.5 rounded-md transition-colors"
                           >
                             🗑️
@@ -225,7 +270,7 @@ export default function PlayersTable({ players }: Props) {
         </div>
       )}
 
-      {deleteId && playerToDelete && (
+      {deleteId && casterToDelete && (
         <div
           className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
           onClick={() => !deleting && setDeleteId(null)}
@@ -239,7 +284,7 @@ export default function PlayersTable({ players }: Props) {
               O&apos;chirishni tasdiqlang
             </h2>
             <p className="text-[#8B92A8] mb-6 text-center">
-              <span className="text-white font-bold">{playerToDelete.nickname}</span> o&apos;yinchisini o&apos;chirmoqchimisiz?
+              <span className="text-white font-bold">{casterToDelete.nickname}</span> casterini o&apos;chirmoqchimisiz?
               Bu amal qaytarib bo&apos;lmaydi!
             </p>
             <div className="flex gap-3">

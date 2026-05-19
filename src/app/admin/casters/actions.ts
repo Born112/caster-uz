@@ -4,14 +4,20 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 
-export type PlayerFormData = {
+export type CasterFormData = {
   nickname: string;
   real_name: string;
   city: string;
   bio: string;
-  telegram_username: string;
   games: string[];
   is_verified: boolean;
+  is_live: boolean;
+  twitch_url: string;
+  youtube_url: string;
+  telegram_username: string;
+  broadcasts_count: number;
+  subscribers_count: number;
+  rating: number;
 };
 
 async function checkAdmin() {
@@ -37,7 +43,7 @@ async function checkAdmin() {
   return { supabase };
 }
 
-export async function createPlayer(data: PlayerFormData) {
+export async function createCaster(data: CasterFormData) {
   const auth = await checkAdmin();
   if ("error" in auth) return { error: auth.error };
 
@@ -51,14 +57,20 @@ export async function createPlayer(data: PlayerFormData) {
     return { error: "Kamida bitta o'yin tanlang" };
   }
 
-  const { error } = await supabase.from("players").insert({
+  const { error } = await supabase.from("casters").insert({
     nickname: data.nickname.trim(),
     real_name: data.real_name.trim() || null,
     city: data.city.trim() || null,
     bio: data.bio.trim() || null,
-    telegram_username: data.telegram_username.trim() || null,
     games: data.games,
     is_verified: data.is_verified,
+    is_live: data.is_live,
+    twitch_url: data.twitch_url.trim() || null,
+    youtube_url: data.youtube_url.trim() || null,
+    telegram_username: data.telegram_username.trim() || null,
+    broadcasts_count: data.broadcasts_count,
+    subscribers_count: data.subscribers_count,
+    rating: data.rating,
   });
 
   if (error) {
@@ -68,14 +80,14 @@ export async function createPlayer(data: PlayerFormData) {
     return { error: error.message };
   }
 
-  revalidatePath("/admin/players");
+  revalidatePath("/admin/casters");
   revalidatePath("/");
-  revalidatePath("/cs/players");
-  revalidatePath("/dota/players");
-  redirect("/admin/players");
+  revalidatePath("/cs/casters");
+  revalidatePath("/dota/casters");
+  redirect("/admin/casters");
 }
 
-export async function updatePlayer(id: string, data: PlayerFormData) {
+export async function updateCaster(id: string, data: CasterFormData) {
   const auth = await checkAdmin();
   if ("error" in auth) return { error: auth.error };
 
@@ -90,15 +102,21 @@ export async function updatePlayer(id: string, data: PlayerFormData) {
   }
 
   const { error } = await supabase
-    .from("players")
+    .from("casters")
     .update({
       nickname: data.nickname.trim(),
       real_name: data.real_name.trim() || null,
       city: data.city.trim() || null,
       bio: data.bio.trim() || null,
-      telegram_username: data.telegram_username.trim() || null,
       games: data.games,
       is_verified: data.is_verified,
+      is_live: data.is_live,
+      twitch_url: data.twitch_url.trim() || null,
+      youtube_url: data.youtube_url.trim() || null,
+      telegram_username: data.telegram_username.trim() || null,
+      broadcasts_count: data.broadcasts_count,
+      subscribers_count: data.subscribers_count,
+      rating: data.rating,
     })
     .eq("id", id);
 
@@ -109,28 +127,28 @@ export async function updatePlayer(id: string, data: PlayerFormData) {
     return { error: error.message };
   }
 
-  revalidatePath("/admin/players");
+  revalidatePath("/admin/casters");
   revalidatePath("/");
-  revalidatePath("/cs/players");
-  revalidatePath("/dota/players");
-  redirect("/admin/players");
+  revalidatePath("/cs/casters");
+  revalidatePath("/dota/casters");
+  redirect("/admin/casters");
 }
 
-export async function deletePlayer(id: string) {
+export async function deleteCaster(id: string) {
   const auth = await checkAdmin();
   if ("error" in auth) return { error: auth.error };
 
   const { supabase } = auth;
 
-  const { error } = await supabase.from("players").delete().eq("id", id);
+  const { error } = await supabase.from("casters").delete().eq("id", id);
 
   if (error) {
     return { error: error.message };
   }
 
-  revalidatePath("/admin/players");
+  revalidatePath("/admin/casters");
   revalidatePath("/");
-  revalidatePath("/cs/players");
-  revalidatePath("/dota/players");
+  revalidatePath("/cs/casters");
+  revalidatePath("/dota/casters");
   return { success: true };
 }
