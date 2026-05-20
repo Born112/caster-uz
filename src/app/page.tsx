@@ -1,14 +1,29 @@
 import { supabase } from "@/lib/supabase";
 import Header from "@/components/Header";
+import Link from "next/link";
 
 export default async function Home() {
-  const { data: players, error } = await supabase
+  const { data: players } = await supabase
     .from("players")
     .select("*")
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .limit(6);
 
-  const csCount = players?.filter((p) => p.games?.includes("CS 1.6")).length || 0;
-  const dotaCount = players?.filter((p) => p.games?.includes("Dota Allstars")).length || 0;
+  const { data: casters } = await supabase
+    .from("casters")
+    .select("*")
+    .order("rating", { ascending: false })
+    .limit(4);
+
+  const { count: totalPlayers } = await supabase
+    .from("players")
+    .select("*", { count: "exact", head: true });
+
+  const { count: totalCasters } = await supabase
+    .from("casters")
+    .select("*", { count: "exact", head: true });
+
+  const liveCasters = casters?.filter((c) => c.is_live) || [];
 
   return (
     <main className="min-h-screen bg-[#0A0E1A] text-white">
@@ -25,11 +40,136 @@ export default async function Home() {
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12">
-          <StatCard label="Jami o'yinchilar" value={players?.length || 0} color="#FF6B35" />
-          <StatCard label="CS 1.6" value={csCount} color="#FF6B35" emoji="🎯" />
-          <StatCard label="Dota Allstars" value={dotaCount} color="#00D9FF" emoji="⚔️" />
-          <StatCard label="Casterlar" value={0} color="#AFA9EC" emoji="🎙️" />
+          <StatCard label="O'yinchilar" value={totalPlayers || 0} color="#FF6B35" emoji="🎮" />
+          <StatCard label="Casterlar" value={totalCasters || 0} color="#00D9FF" emoji="🎙️" />
+          <StatCard label="Hozir LIVE" value={liveCasters.length} color="#FF3D71" emoji="🔴" pulse />
+          <StatCard label="Turnirlar" value={0} color="#AFA9EC" emoji="🏆" />
         </div>
+
+        {liveCasters.length > 0 && (
+          <section className="mb-12">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold flex items-center gap-2">
+                <span className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></span>
+                Hozir jonli efirda
+              </h2>
+              <span className="text-sm text-[#8B92A8]">
+                {liveCasters.length} ta caster
+              </span>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {liveCasters.map((caster) => {
+                const primaryGame = caster.games[0];
+                const isPrimaryCS = primaryGame === "CS 1.6";
+                const primaryColor = isPrimaryCS ? "#FF6B35" : "#00D9FF";
+                return (
+                  <div
+                    key={caster.id}
+                    className="bg-[#131929] border border-red-500/30 rounded-xl p-5 flex items-center gap-4"
+                  >
+                    <div className="relative shrink-0">
+                      <div
+                        className="w-14 h-14 rounded-full bg-[#0A0E1A] border-2 flex items-center justify-center font-bold text-lg"
+                        style={{ borderColor: primaryColor, color: primaryColor }}
+                      >
+                        {caster.nickname.substring(0, 2).toUpperCase()}
+                      </div>
+                      <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-red-500 border-2 border-[#131929] rounded-full animate-pulse"></div>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-bold">{caster.nickname}</span>
+                        {caster.is_verified && (
+                          <span className="text-green-400 text-xs">✓</span>
+                        )}
+                      </div>
+                      <div className="inline-flex items-center gap-1 bg-red-500/20 text-red-300 text-xs font-bold px-2 py-0.5 rounded-md">
+                        <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse"></span>
+                        JONLI EFIRDA
+                      </div>
+                    </div>
+                    {caster.twitch_url && (
+                      <a
+                        href={caster.twitch_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="bg-purple-500 hover:bg-purple-600 text-white text-sm font-bold px-4 py-2 rounded-md transition-colors shrink-0"
+                      >
+                        📺 Tomosha
+                      </a>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
+        {casters && casters.length > 0 && (
+          <section className="mb-12">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold">
+                <span className="text-[#00D9FF]">●</span> Top casterlar
+              </h2>
+              <span className="text-sm text-[#8B92A8]">
+                {totalCasters || 0} ta caster
+              </span>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {casters.map((caster) => {
+                const primaryGame = caster.games[0];
+                const isPrimaryCS = primaryGame === "CS 1.6";
+                const primaryColor = isPrimaryCS ? "#FF6B35" : "#00D9FF";
+
+                return (
+                  <div
+                    key={caster.id}
+                    className="bg-[#131929] border border-white/10 hover:border-white/20 rounded-xl p-5 transition-all hover:-translate-y-1"
+                  >
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="relative shrink-0">
+                        <div
+                          className="w-12 h-12 rounded-full bg-[#0A0E1A] border-2 flex items-center justify-center font-bold"
+                          style={{ borderColor: primaryColor, color: primaryColor }}
+                        >
+                          {caster.nickname.substring(0, 2).toUpperCase()}
+                        </div>
+                        {caster.is_live && (
+                          <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-red-500 border-2 border-[#131929] rounded-full animate-pulse"></div>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-bold truncate">{caster.nickname}</span>
+                          {caster.is_verified && (
+                            <span className="text-green-400 text-xs shrink-0">✓</span>
+                          )}
+                        </div>
+                        <div className="flex gap-1 mt-1">
+                          {caster.games.map((g: string) => (
+                            <span
+                              key={g}
+                              className="text-xs"
+                              style={{ color: g === "CS 1.6" ? "#FF6B35" : "#00D9FF" }}
+                            >
+                              {g === "CS 1.6" ? "🎯" : "⚔️"}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-xs text-[#8B92A8] mb-2">
+                      👥 {caster.subscribers_count.toLocaleString()} obunachi
+                    </div>
+                    <div className="text-sm font-bold" style={{ color: primaryColor }}>
+                      ⭐ {caster.rating.toFixed(1)}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
 
         <section className="mb-12">
           <div className="flex items-center justify-between mb-6">
@@ -37,27 +177,16 @@ export default async function Home() {
               <span className="text-[#FF6B35]">●</span> So&apos;nggi qo&apos;shilgan o&apos;yinchilar
             </h2>
             <span className="text-sm text-[#8B92A8]">
-              {players?.length || 0} ta o&apos;yinchi
+              {totalPlayers || 0} ta o&apos;yinchi
             </span>
           </div>
 
-          {error && (
-            <div className="bg-red-900/30 border border-red-500/30 rounded-xl p-4 text-red-300">
-              Xatolik: {error.message}
-            </div>
-          )}
-
-          {!error && players && players.length === 0 && (
-            <p className="text-[#8B92A8]">Hozircha o&apos;yinchilar yo&apos;q</p>
-          )}
-
-          {!error && players && players.length > 0 && (
+          {players && players.length > 0 && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {players.map((player) => {
                 const telegramLink = player.telegram_username
                   ? "https://t.me/" + player.telegram_username
                   : null;
-                
                 const primaryGame = player.games?.[0] || "CS 1.6";
                 const isPrimaryCS = primaryGame === "CS 1.6";
                 const primaryColor = isPrimaryCS ? "#FF6B35" : "#00D9FF";
@@ -151,19 +280,24 @@ function StatCard({
   value,
   color,
   emoji,
+  pulse,
 }: {
   label: string;
   value: number;
   color: string;
-  emoji?: string;
+  emoji: string;
+  pulse?: boolean;
 }) {
   return (
     <div className="bg-[#131929] border border-white/10 rounded-xl p-4">
       <div className="flex items-center gap-2 mb-2">
-        {emoji && <span className="text-lg">{emoji}</span>}
+        <span className="text-lg">{emoji}</span>
         <p className="text-xs text-[#8B92A8]">{label}</p>
       </div>
-      <p className="text-3xl font-bold" style={{ color }}>
+      <p
+        className={"text-3xl font-bold " + (pulse && value > 0 ? "animate-pulse" : "")}
+        style={{ color }}
+      >
         {value}
       </p>
     </div>
