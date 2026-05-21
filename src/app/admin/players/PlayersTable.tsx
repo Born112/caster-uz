@@ -5,6 +5,21 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { deletePlayer } from "./actions";
 
+type TeamMembership = {
+  id: string;
+  is_current: boolean;
+  position: string | null;
+  jersey_number: number | null;
+  teams: { id: string; name: string; short_name: string | null; game: string } | null;
+};
+
+type NationalMembership = {
+  id: string;
+  is_current: boolean;
+  role: string;
+  national_teams: { id: string; name: string; region: string; game: string } | null;
+};
+
 type Player = {
   id: string;
   nickname: string;
@@ -16,11 +31,11 @@ type Player = {
   telegram_username: string | null;
   games: string[] | null;
   created_at: string;
+  team_memberships?: TeamMembership[];
+  national_memberships?: NationalMembership[];
 };
 
-type Props = {
-  players: Player[];
-};
+type Props = { players: Player[] };
 
 export default function PlayersTable({ players }: Props) {
   const router = useRouter();
@@ -48,15 +63,12 @@ export default function PlayersTable({ players }: Props) {
   const handleDelete = async () => {
     if (!deleteId) return;
     setDeleting(true);
-
     const result = await deletePlayer(deleteId);
-
     if (result && "error" in result) {
       alert("Xatolik: " + result.error);
       setDeleting(false);
       return;
     }
-
     setDeleteId(null);
     setDeleting(false);
     router.refresh();
@@ -79,26 +91,9 @@ export default function PlayersTable({ players }: Props) {
           </div>
 
           <div className="flex gap-2">
-            <FilterButton
-              active={gameFilter === "all"}
-              onClick={() => setGameFilter("all")}
-              label="Hammasi"
-              count={players.length}
-            />
-            <FilterButton
-              active={gameFilter === "CS 1.6"}
-              onClick={() => setGameFilter("CS 1.6")}
-              label="🎯 CS 1.6"
-              count={players.filter((p) => p.games?.includes("CS 1.6")).length}
-              color="#FF6B35"
-            />
-            <FilterButton
-              active={gameFilter === "Dota Allstars"}
-              onClick={() => setGameFilter("Dota Allstars")}
-              label="⚔️ Dota"
-              count={players.filter((p) => p.games?.includes("Dota Allstars")).length}
-              color="#00D9FF"
-            />
+            <FilterButton active={gameFilter === "all"} onClick={() => setGameFilter("all")} label="Hammasi" count={players.length} />
+            <FilterButton active={gameFilter === "CS 1.6"} onClick={() => setGameFilter("CS 1.6")} label="🎯 CS 1.6" count={players.filter((p) => p.games?.includes("CS 1.6")).length} color="#FF6B35" />
+            <FilterButton active={gameFilter === "Dota Allstars"} onClick={() => setGameFilter("Dota Allstars")} label="⚔️ Dota" count={players.filter((p) => p.games?.includes("Dota Allstars")).length} color="#00D9FF" />
           </div>
         </div>
       </div>
@@ -116,10 +111,10 @@ export default function PlayersTable({ players }: Props) {
               <thead className="bg-[#0A0E1A] border-b border-white/10">
                 <tr>
                   <th className="text-left text-xs uppercase text-[#8B92A8] font-medium px-4 py-3">O&apos;yinchi</th>
-                  <th className="text-left text-xs uppercase text-[#8B92A8] font-medium px-4 py-3 hidden md:table-cell">Telegram</th>
-                  <th className="text-left text-xs uppercase text-[#8B92A8] font-medium px-4 py-3 hidden lg:table-cell">Shahar</th>
-                  <th className="text-left text-xs uppercase text-[#8B92A8] font-medium px-4 py-3 hidden lg:table-cell">O&apos;yinlar</th>
-                  <th className="text-left text-xs uppercase text-[#8B92A8] font-medium px-4 py-3 hidden md:table-cell">Holat</th>
+                  <th className="text-left text-xs uppercase text-[#8B92A8] font-medium px-4 py-3 hidden md:table-cell">🏆 Klub</th>
+                  <th className="text-left text-xs uppercase text-[#8B92A8] font-medium px-4 py-3 hidden lg:table-cell">🇺🇿 Terma</th>
+                  <th className="text-left text-xs uppercase text-[#8B92A8] font-medium px-4 py-3 hidden xl:table-cell">Telegram</th>
+                  <th className="text-left text-xs uppercase text-[#8B92A8] font-medium px-4 py-3 hidden lg:table-cell">Holat</th>
                   <th className="text-right text-xs uppercase text-[#8B92A8] font-medium px-4 py-3">Amallar</th>
                 </tr>
               </thead>
@@ -128,6 +123,9 @@ export default function PlayersTable({ players }: Props) {
                   const primaryGame = player.games?.[0] || "CS 1.6";
                   const isPrimaryCS = primaryGame === "CS 1.6";
                   const primaryColor = isPrimaryCS ? "#FF6B35" : "#00D9FF";
+
+                  const currentTeams = player.team_memberships?.filter((m) => m.is_current && m.teams) || [];
+                  const currentNationals = player.national_memberships?.filter((m) => m.is_current && m.national_teams) || [];
 
                   return (
                     <tr key={player.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
@@ -152,7 +150,58 @@ export default function PlayersTable({ players }: Props) {
                           </div>
                         </div>
                       </td>
+
                       <td className="px-4 py-3 hidden md:table-cell">
+                        {currentTeams.length > 0 ? (
+                          <div className="space-y-1">
+                            {currentTeams.map((m) => {
+                              const teamColor = m.teams?.game === "CS 1.6" ? "#FF6B35" : "#00D9FF";
+                              return (
+                                <div key={m.id} className="flex items-center gap-2 flex-wrap">
+                                  <span
+                                    className="text-xs font-bold px-2 py-0.5 rounded"
+                                    style={{
+                                      backgroundColor: teamColor + "20",
+                                      color: teamColor,
+                                    }}
+                                  >
+                                    {m.teams?.short_name || m.teams?.name}
+                                  </span>
+                                  {m.position && (
+                                    <span className="text-xs text-[#8B92A8]">
+                                      {m.position}
+                                      {m.jersey_number && " #" + m.jersey_number}
+                                    </span>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <span className="text-sm text-[#5A6178]">—</span>
+                        )}
+                      </td>
+
+                      <td className="px-4 py-3 hidden lg:table-cell">
+                        {currentNationals.length > 0 ? (
+                          <div className="space-y-1">
+                            {currentNationals.map((m) => {
+                              const isNational = m.national_teams?.region === "national";
+                              return (
+                                <div key={m.id} className="flex items-center gap-1 text-xs">
+                                  <span>{isNational ? "🇺🇿" : "🏙️"}</span>
+                                  <span className="text-white">{m.national_teams?.name}</span>
+                                  {m.role === "captain" && <span title="Kapitan">👑</span>}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <span className="text-sm text-[#5A6178]">—</span>
+                        )}
+                      </td>
+
+                      <td className="px-4 py-3 hidden xl:table-cell">
                         {player.telegram_username ? (
                           <a
                             href={"https://t.me/" + player.telegram_username}
@@ -167,29 +216,8 @@ export default function PlayersTable({ players }: Props) {
                           <span className="text-sm text-[#5A6178]">—</span>
                         )}
                       </td>
-                      <td className="px-4 py-3 hidden lg:table-cell text-sm text-[#8B92A8]">
-                        {player.city || "—"}
-                      </td>
+
                       <td className="px-4 py-3 hidden lg:table-cell">
-                        <div className="flex gap-1 flex-wrap">
-                          {player.games?.map((g) => (
-                            <span
-                              key={g}
-                              className="text-xs px-2 py-0.5 rounded-md"
-                              style={{
-                                backgroundColor:
-                                  g === "CS 1.6"
-                                    ? "rgba(255,107,53,0.15)"
-                                    : "rgba(0,217,255,0.15)",
-                                color: g === "CS 1.6" ? "#FF6B35" : "#00D9FF",
-                              }}
-                            >
-                              {g}
-                            </span>
-                          ))}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 hidden md:table-cell">
                         {player.is_verified ? (
                           <span className="bg-green-500/20 text-green-400 text-xs px-2 py-1 rounded-md">
                             Tasdiqlangan
@@ -200,6 +228,7 @@ export default function PlayersTable({ players }: Props) {
                           </span>
                         )}
                       </td>
+
                       <td className="px-4 py-3 text-right">
                         <div className="flex justify-end gap-2">
                           <Link
@@ -265,28 +294,11 @@ export default function PlayersTable({ players }: Props) {
   );
 }
 
-function FilterButton({
-  active,
-  onClick,
-  label,
-  count,
-  color = "#8B92A8",
-}: {
-  active: boolean;
-  onClick: () => void;
-  label: string;
-  count: number;
-  color?: string;
-}) {
+function FilterButton({ active, onClick, label, count, color = "#8B92A8" }: { active: boolean; onClick: () => void; label: string; count: number; color?: string }) {
   return (
     <button
       onClick={onClick}
-      className={
-        "px-3 py-2 text-sm rounded-md border transition-colors flex items-center gap-2 " +
-        (active
-          ? "border-white/30 bg-white/10 text-white"
-          : "border-white/10 text-[#8B92A8] hover:text-white hover:border-white/20")
-      }
+      className={"px-3 py-2 text-sm rounded-md border transition-colors flex items-center gap-2 " + (active ? "border-white/30 bg-white/10 text-white" : "border-white/10 text-[#8B92A8] hover:text-white hover:border-white/20")}
       style={active ? { borderColor: color, color } : undefined}
     >
       <span>{label}</span>

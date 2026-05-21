@@ -2,49 +2,20 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import LogoutButton from "../LogoutButton";
-import PlayersTable from "./PlayersTable";
+import NationalTeamsList from "./NationalTeamsList";
 
-export default async function AdminPlayersPage() {
+export default async function AdminNationalTeamsPage() {
   const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect("/admin/login");
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { data: profile } = await supabase.from("profiles").select("is_admin").eq("id", user.id).single();
+  if (!profile?.is_admin) redirect("/");
 
-  if (!user) {
-    redirect("/admin/login");
-  }
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("is_admin")
-    .eq("id", user.id)
-    .single();
-
-  if (!profile?.is_admin) {
-    redirect("/");
-  }
-
-  // O'yinchilarni hozirgi klub va terma jamoa ma'lumoti bilan olamiz
-  const { data: players, error } = await supabase
-    .from("players")
-    .select(`
-      *,
-      team_memberships(
-        id,
-        is_current,
-        position,
-        jersey_number,
-        teams(id, name, short_name, game)
-      ),
-      national_memberships(
-        id,
-        is_current,
-        role,
-        national_teams(id, name, region, game)
-      )
-    `)
-    .order("created_at", { ascending: false });
+  const { data: nationalTeams, error } = await supabase
+    .from("national_teams")
+    .select("*, national_memberships(count)")
+    .order("name");
 
   return (
     <main className="min-h-screen bg-[#0A0E1A] text-white">
@@ -58,11 +29,8 @@ export default async function AdminPlayersPage() {
               <span className="text-lg font-bold tracking-wider">CASTER.UZ</span>
             </Link>
             <div className="h-6 w-px bg-white/10 mx-2"></div>
-            <Link href="/admin" className="text-[#FF6B35] hover:text-[#FF8557] font-bold transition-colors">
-              Admin Panel
-            </Link>
+            <Link href="/admin" className="text-[#FF6B35] hover:text-[#FF8557] font-bold transition-colors">Admin Panel</Link>
           </div>
-
           <div className="flex items-center gap-3">
             <span className="text-sm text-[#8B92A8]">{user.email}</span>
             <LogoutButton />
@@ -72,29 +40,24 @@ export default async function AdminPlayersPage() {
 
       <div className="max-w-7xl mx-auto p-6">
         <div className="flex items-center gap-2 text-sm text-[#8B92A8] mb-4 mt-4">
-          <Link href="/admin" className="hover:text-white transition-colors">
-            Admin
-          </Link>
+          <Link href="/admin" className="hover:text-white transition-colors">Admin</Link>
           <span>/</span>
-          <span className="text-white">O&apos;yinchilar</span>
+          <span className="text-white">Terma jamoalar</span>
         </div>
 
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-3xl font-bold mb-2">
-              <span className="text-[#FF6B35]">🎮</span> O&apos;yinchilarni boshqarish
+              <span className="text-[#FF6B35]">🇺🇿</span> Terma jamoalarni boshqarish
             </h1>
-            <p className="text-[#8B92A8]">
-              Jami {players?.length || 0} ta o&apos;yinchi
-            </p>
+            <p className="text-[#8B92A8]">Jami {nationalTeams?.length || 0} ta terma jamoa</p>
           </div>
-
           <Link
-            href="/admin/players/new"
+            href="/admin/national-teams/new"
             className="bg-[#FF6B35] hover:bg-[#FF8557] text-[#0A0E1A] font-bold px-5 py-3 rounded-md transition-colors flex items-center gap-2"
           >
             <span>➕</span>
-            <span>Yangi o&apos;yinchi</span>
+            <span>Yangi terma</span>
           </Link>
         </div>
 
@@ -104,7 +67,7 @@ export default async function AdminPlayersPage() {
           </div>
         )}
 
-        <PlayersTable players={players || []} />
+        <NationalTeamsList teams={nationalTeams || []} />
       </div>
     </main>
   );

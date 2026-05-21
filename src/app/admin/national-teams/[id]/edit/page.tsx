@@ -2,12 +2,11 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import LogoutButton from "../../../LogoutButton";
-import PlayerForm from "../../PlayerForm";
-import MembershipsManager from "../../MembershipsManager";
+import NationalTeamForm from "../../NationalTeamForm";
 
 type Params = Promise<{ id: string }>;
 
-export default async function EditPlayerPage({ params }: { params: Params }) {
+export default async function EditNationalTeamPage({ params }: { params: Params }) {
   const { id } = await params;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -16,32 +15,8 @@ export default async function EditPlayerPage({ params }: { params: Params }) {
   const { data: profile } = await supabase.from("profiles").select("is_admin").eq("id", user.id).single();
   if (!profile?.is_admin) redirect("/");
 
-  const { data: player, error } = await supabase.from("players").select("*").eq("id", id).single();
-  if (error || !player) notFound();
-
-  // Klub a'zoliklari
-  const { data: teamMemberships } = await supabase
-    .from("team_memberships")
-    .select("*, teams(id, name, short_name, game)")
-    .eq("player_id", id);
-
-  // Terma jamoa a'zoliklari
-  const { data: nationalMemberships } = await supabase
-    .from("national_memberships")
-    .select("*, national_teams(id, name, region, game)")
-    .eq("player_id", id);
-
-  // Barcha jamoalar (forma uchun)
-  const { data: allTeams } = await supabase
-    .from("teams")
-    .select("id, name, short_name, game")
-    .order("name");
-
-  // Barcha terma jamoalar
-  const { data: allNationalTeams } = await supabase
-    .from("national_teams")
-    .select("id, name, region, game")
-    .order("name");
+  const { data: team, error } = await supabase.from("national_teams").select("*").eq("id", id).single();
+  if (error || !team) notFound();
 
   return (
     <main className="min-h-screen bg-[#0A0E1A] text-white">
@@ -68,36 +43,19 @@ export default async function EditPlayerPage({ params }: { params: Params }) {
         <div className="flex items-center gap-2 text-sm text-[#8B92A8] mb-4 mt-4">
           <Link href="/admin" className="hover:text-white transition-colors">Admin</Link>
           <span>/</span>
-          <Link href="/admin/players" className="hover:text-white transition-colors">O&apos;yinchilar</Link>
+          <Link href="/admin/national-teams" className="hover:text-white transition-colors">Terma jamoalar</Link>
           <span>/</span>
-          <span className="text-white">{player.nickname}</span>
+          <span className="text-white">{team.name}</span>
         </div>
 
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">
             <span className="text-[#00D9FF]">✏️</span> Tahrirlash:{" "}
-            <span className="text-[#FF6B35]">{player.nickname}</span>
+            <span className="text-[#FF6B35]">{team.name}</span>
           </h1>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2">
-            <PlayerForm mode="edit" player={player} />
-          </div>
-
-          <div className="lg:col-span-1">
-            <div className="sticky top-6">
-              <h2 className="text-lg font-bold mb-3">A&apos;zoliklar boshqaruvi</h2>
-              <MembershipsManager
-                playerId={player.id}
-                teamMemberships={teamMemberships || []}
-                nationalMemberships={nationalMemberships || []}
-                allTeams={allTeams || []}
-                allNationalTeams={allNationalTeams || []}
-              />
-            </div>
-          </div>
-        </div>
+        <NationalTeamForm mode="edit" team={team} />
       </div>
     </main>
   );
