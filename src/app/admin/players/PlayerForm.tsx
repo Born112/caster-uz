@@ -60,7 +60,7 @@ export default function PlayerForm({ mode, player }: Props) {
         : await updatePlayer(player!.id, data);
 
     if (result && "error" in result) {
-      setError(result.error);
+      setError(result.error ?? "Xatolik yuz berdi");
       setLoading(false);
     }
   };

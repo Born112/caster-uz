@@ -69,7 +69,7 @@ export default function TournamentForm({ mode, tournament }: Props) {
       : await updateTournament(tournament!.id, data);
 
     if (result && "error" in result) {
-      setError(result.error);
+      setError(result.error ?? "Xatolik yuz berdi");
       setLoading(false);
     }
   };
