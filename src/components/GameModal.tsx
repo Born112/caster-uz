@@ -1,23 +1,22 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useEffect } from "react";
 
 type GameModalProps = {
   isOpen: boolean;
   onClose: () => void;
-  section: "players" | "casters" | "tournaments";
+  section: "players" | "casters" | "tournaments" | "teams";
 };
 
-const sectionLabels = {
-  players: "O'yinchilar",
-  casters: "Casterlar",
-  tournaments: "Turnirlar",
+const sectionMap = {
+  players: { label: "O'yinchilar", emoji: "🎮" },
+  casters: { label: "Casterlar", emoji: "🎙️" },
+  tournaments: { label: "Turnirlar", emoji: "🏆" },
+  teams: { label: "Jamoalar", emoji: "🏅" },
 };
 
 export default function GameModal({ isOpen, onClose, section }: GameModalProps) {
-  const router = useRouter();
-
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = "hidden";
@@ -29,22 +28,9 @@ export default function GameModal({ isOpen, onClose, section }: GameModalProps) 
     };
   }, [isOpen]);
 
-  useEffect(() => {
-    const handleEsc = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    if (isOpen) {
-      window.addEventListener("keydown", handleEsc);
-    }
-    return () => window.removeEventListener("keydown", handleEsc);
-  }, [isOpen, onClose]);
-
   if (!isOpen) return null;
 
-  const handleSelect = (game: "cs" | "dota") => {
-    onClose();
-    router.push("/" + game + "/" + section);
-  };
+  const sectionInfo = sectionMap[section];
 
   return (
     <div
@@ -52,63 +38,45 @@ export default function GameModal({ isOpen, onClose, section }: GameModalProps) 
       onClick={onClose}
     >
       <div
-        className="bg-[#0A0E1A] border border-white/10 rounded-2xl max-w-md w-full p-8 shadow-2xl"
+        className="bg-[#131929] border border-white/10 rounded-2xl max-w-md w-full p-6 shadow-2xl relative"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h2 className="text-2xl font-bold text-white mb-1">
-              Qaysi o&apos;yin?
-            </h2>
-            <p className="text-sm text-[#8B92A8]">
-              {sectionLabels[section]} bo&apos;limini tanlang
-            </p>
-          </div>
-          <button
-            onClick={onClose}
-            className="text-[#8B92A8] hover:text-white transition-colors p-2 hover:bg-white/5 rounded-md"
-            aria-label="Yopish"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <line x1="18" y1="6" x2="6" y2="18"></line>
-              <line x1="6" y1="6" x2="18" y2="18"></line>
-            </svg>
-          </button>
-        </div>
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 text-[#8B92A8] hover:text-white text-2xl leading-none"
+        >
+          ×
+        </button>
 
-        <div className="grid grid-cols-2 gap-4">
-          <button
-            onClick={() => handleSelect("cs")}
-            className="group bg-[#131929] border border-[#FF6B35]/30 hover:border-[#FF6B35] hover:bg-[#FF6B35]/10 rounded-xl p-6 transition-all hover:-translate-y-1"
-          >
-            <div className="text-4xl mb-3">🎯</div>
-            <div className="text-lg font-bold text-white mb-1">CS 1.6</div>
-            <div className="text-xs text-[#8B92A8]">Counter-Strike</div>
-          </button>
-
-          <button
-            onClick={() => handleSelect("dota")}
-            className="group bg-[#131929] border border-[#00D9FF]/30 hover:border-[#00D9FF] hover:bg-[#00D9FF]/10 rounded-xl p-6 transition-all hover:-translate-y-1"
-          >
-            <div className="text-4xl mb-3">⚔️</div>
-            <div className="text-lg font-bold text-white mb-1">Dota</div>
-            <div className="text-xs text-[#8B92A8]">Allstars</div>
-          </button>
-        </div>
-
-        <p className="text-xs text-center text-[#8B92A8] mt-6">
-          ESC tugmasini bosib yoping
+        <div className="text-5xl mb-4 text-center">{sectionInfo.emoji}</div>
+        <h2 className="text-2xl font-bold text-center mb-2">
+          {sectionInfo.label}
+        </h2>
+        <p className="text-sm text-[#8B92A8] text-center mb-6">
+          Qaysi o&apos;yin uchun?
         </p>
+
+        <div className="grid grid-cols-2 gap-3">
+          <Link
+            href={"/cs/" + section}
+            onClick={onClose}
+            className="p-4 rounded-xl border-2 border-[#FF6B35]/30 hover:border-[#FF6B35] bg-[#FF6B35]/5 hover:bg-[#FF6B35]/10 transition-all text-center"
+          >
+            <div className="text-4xl mb-2">🎯</div>
+            <div className="font-bold text-[#FF6B35]">CS 1.6</div>
+            <div className="text-xs text-[#8B92A8] mt-1">Counter-Strike</div>
+          </Link>
+
+          <Link
+            href={"/dota/" + section}
+            onClick={onClose}
+            className="p-4 rounded-xl border-2 border-[#00D9FF]/30 hover:border-[#00D9FF] bg-[#00D9FF]/5 hover:bg-[#00D9FF]/10 transition-all text-center"
+          >
+            <div className="text-4xl mb-2">⚔️</div>
+            <div className="font-bold text-[#00D9FF]">Dota Allstars</div>
+            <div className="text-xs text-[#8B92A8] mt-1">Dota</div>
+          </Link>
+        </div>
       </div>
     </div>
   );
