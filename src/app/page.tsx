@@ -5,7 +5,21 @@ import Link from "next/link";
 export default async function Home() {
   const { data: players } = await supabase
     .from("players")
-    .select("*")
+    .select(`
+      *,
+      team_memberships(
+        id,
+        is_current,
+        position,
+        teams(id, name, short_name, game)
+      ),
+      national_memberships(
+        id,
+        is_current,
+        role,
+        national_teams(id, name, region, game)
+      )
+    `)
     .order("created_at", { ascending: false })
     .limit(6);
 
@@ -23,6 +37,10 @@ export default async function Home() {
     .from("casters")
     .select("*", { count: "exact", head: true });
 
+  const { count: totalTeams } = await supabase
+    .from("teams")
+    .select("*", { count: "exact", head: true });
+
   const liveCasters = casters?.filter((c) => c.is_live) || [];
 
   return (
@@ -35,15 +53,15 @@ export default async function Home() {
             O&apos;zbekiston <span className="text-[#FF6B35]">Kibersport</span> Portali
           </h1>
           <p className="text-lg text-[#8B92A8]">
-            Casterlar · O&apos;yinchilar · Turnirlar · Tarix
+            Casterlar · O&apos;yinchilar · Jamoalar · Turnirlar
           </p>
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12">
           <StatCard label="O'yinchilar" value={totalPlayers || 0} color="#FF6B35" emoji="🎮" />
+          <StatCard label="Jamoalar" value={totalTeams || 0} color="#AFA9EC" emoji="🏆" />
           <StatCard label="Casterlar" value={totalCasters || 0} color="#00D9FF" emoji="🎙️" />
           <StatCard label="Hozir LIVE" value={liveCasters.length} color="#FF3D71" emoji="🔴" pulse />
-          <StatCard label="Turnirlar" value={0} color="#AFA9EC" emoji="🏆" />
         </div>
 
         {liveCasters.length > 0 && (
@@ -105,72 +123,6 @@ export default async function Home() {
           </section>
         )}
 
-        {casters && casters.length > 0 && (
-          <section className="mb-12">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold">
-                <span className="text-[#00D9FF]">●</span> Top casterlar
-              </h2>
-              <span className="text-sm text-[#8B92A8]">
-                {totalCasters || 0} ta caster
-              </span>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {casters.map((caster) => {
-                const primaryGame = caster.games[0];
-                const isPrimaryCS = primaryGame === "CS 1.6";
-                const primaryColor = isPrimaryCS ? "#FF6B35" : "#00D9FF";
-
-                return (
-                  <div
-                    key={caster.id}
-                    className="bg-[#131929] border border-white/10 hover:border-white/20 rounded-xl p-5 transition-all hover:-translate-y-1"
-                  >
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="relative shrink-0">
-                        <div
-                          className="w-12 h-12 rounded-full bg-[#0A0E1A] border-2 flex items-center justify-center font-bold"
-                          style={{ borderColor: primaryColor, color: primaryColor }}
-                        >
-                          {caster.nickname.substring(0, 2).toUpperCase()}
-                        </div>
-                        {caster.is_live && (
-                          <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-red-500 border-2 border-[#131929] rounded-full animate-pulse"></div>
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1.5">
-                          <span className="font-bold truncate">{caster.nickname}</span>
-                          {caster.is_verified && (
-                            <span className="text-green-400 text-xs shrink-0">✓</span>
-                          )}
-                        </div>
-                        <div className="flex gap-1 mt-1">
-                          {caster.games.map((g: string) => (
-                            <span
-                              key={g}
-                              className="text-xs"
-                              style={{ color: g === "CS 1.6" ? "#FF6B35" : "#00D9FF" }}
-                            >
-                              {g === "CS 1.6" ? "🎯" : "⚔️"}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="text-xs text-[#8B92A8] mb-2">
-                      👥 {caster.subscribers_count.toLocaleString()} obunachi
-                    </div>
-                    <div className="text-sm font-bold" style={{ color: primaryColor }}>
-                      ⭐ {caster.rating.toFixed(1)}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </section>
-        )}
-
         <section className="mb-12">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl font-bold">
@@ -184,17 +136,24 @@ export default async function Home() {
           {players && players.length > 0 && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {players.map((player) => {
-                const telegramLink = player.telegram_username
-                  ? "https://t.me/" + player.telegram_username
-                  : null;
                 const primaryGame = player.games?.[0] || "CS 1.6";
                 const isPrimaryCS = primaryGame === "CS 1.6";
                 const primaryColor = isPrimaryCS ? "#FF6B35" : "#00D9FF";
+                const gameSlug = isPrimaryCS ? "cs" : "dota";
+
+                // Hozirgi klub (primary game uchun)
+                const currentClub = (player.team_memberships || [])
+                  .find((m: { is_current: boolean; teams: { game: string } | null }) => m.is_current && m.teams?.game === primaryGame);
+
+                // Hozirgi terma jamoa
+                const currentNationals = (player.national_memberships || [])
+                  .filter((m: { is_current: boolean; national_teams: { game: string } | null }) => m.is_current && m.national_teams?.game === primaryGame);
 
                 return (
-                  <div
+                  <Link
                     key={player.id}
-                    className="bg-[#131929] border border-white/10 hover:border-white/20 rounded-xl p-6 transition-all hover:-translate-y-1"
+                    href={"/" + gameSlug + "/players/" + player.id}
+                    className="bg-[#131929] border border-white/10 hover:border-white/20 rounded-xl p-6 transition-all hover:-translate-y-1 block"
                   >
                     <div className="flex items-center gap-3 mb-4">
                       <div
@@ -218,14 +177,39 @@ export default async function Home() {
                       </div>
                     </div>
 
+                    {currentClub && (
+                      <div className="mb-2 text-sm">
+                        <span className="text-[#8B92A8]">🏆 </span>
+                        <span className="font-bold" style={{ color: primaryColor }}>
+                          {/* @ts-expect-error - teams is joined */}
+                          {currentClub.teams?.name}
+                        </span>
+                        {/* @ts-expect-error - position is in db */}
+                        {currentClub.position && (
+                          <span className="text-xs text-[#8B92A8] ml-1">
+                            {/* @ts-expect-error - position is in db */}
+                            ({currentClub.position})
+                          </span>
+                        )}
+                      </div>
+                    )}
+
+                    {currentNationals.length > 0 && (
+                      <div className="mb-2 text-xs">
+                        {currentNationals.map((m: { id: string; role: string; national_teams: { name: string; region: string } | null }) => (
+                          <div key={m.id} className="flex items-center gap-1">
+                            <span>{m.national_teams?.region === "national" ? "🇺🇿" : "🏙️"}</span>
+                            <span className="text-white">{m.national_teams?.name}</span>
+                            {m.role === "captain" && <span>👑</span>}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
                     {player.city && (
                       <p className="text-sm text-[#8B92A8] mb-2 flex items-center gap-1">
                         <span>📍</span> {player.city}
                       </p>
-                    )}
-
-                    {player.bio && (
-                      <p className="text-sm text-gray-300 mb-3 line-clamp-2">{player.bio}</p>
                     )}
 
                     <div className="flex items-center justify-between mt-4 pt-3 border-t border-white/5">
@@ -246,19 +230,8 @@ export default async function Home() {
                           </span>
                         ))}
                       </div>
-
-                      {telegramLink && (
-                        <a
-                          href={telegramLink}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-xs text-[#00D9FF] hover:underline"
-                        >
-                          @{player.telegram_username}
-                        </a>
-                      )}
                     </div>
-                  </div>
+                  </Link>
                 );
               })}
             </div>
@@ -276,18 +249,8 @@ export default async function Home() {
 }
 
 function StatCard({
-  label,
-  value,
-  color,
-  emoji,
-  pulse,
-}: {
-  label: string;
-  value: number;
-  color: string;
-  emoji: string;
-  pulse?: boolean;
-}) {
+  label, value, color, emoji, pulse,
+}: { label: string; value: number; color: string; emoji: string; pulse?: boolean; }) {
   return (
     <div className="bg-[#131929] border border-white/10 rounded-xl p-4">
       <div className="flex items-center gap-2 mb-2">
