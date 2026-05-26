@@ -2,8 +2,20 @@ import { supabase } from "@/lib/supabase";
 import Header from "@/components/Header";
 import Link from "next/link";
 
+type PlayerForTop = {
+  id: string;
+  nickname: string;
+  real_name: string | null;
+  is_verified: boolean;
+  cs_rating?: number;
+  dota_rating?: number;
+  team_memberships?: Array<{
+    is_current: boolean;
+    teams: { name: string; game: string } | { name: string; game: string }[] | null;
+  }>;
+};
+
 export default async function Home() {
-  // Top 5 CS o'yinchilari
   const { data: topCS } = await supabase
     .from("players")
     .select("id, nickname, real_name, is_verified, cs_rating, games, team_memberships(is_current, teams(name, game))")
@@ -11,7 +23,6 @@ export default async function Home() {
     .order("cs_rating", { ascending: false })
     .limit(5);
 
-  // Top 5 Dota o'yinchilari
   const { data: topDota } = await supabase
     .from("players")
     .select("id, nickname, real_name, is_verified, dota_rating, games, team_memberships(is_current, teams(name, game))")
@@ -107,16 +118,16 @@ export default async function Home() {
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-12">
-          <TopPlayers 
+          <TopPlayers
             title="🎯 CS 1.6 Top 5"
-            players={topCS || []}
+            players={(topCS as PlayerForTop[]) || []}
             game="cs"
             color="#FF6B35"
             ratingKey="cs_rating"
           />
-          <TopPlayers 
+          <TopPlayers
             title="⚔️ Dota Top 5"
-            players={topDota || []}
+            players={(topDota as PlayerForTop[]) || []}
             game="dota"
             color="#00D9FF"
             ratingKey="dota_rating"
@@ -133,12 +144,12 @@ export default async function Home() {
   );
 }
 
-function TopPlayers({ 
-  title, players, game, color, ratingKey 
-}: { 
-  title: string; 
-  players: { id: string; nickname: string; real_name: string | null; is_verified: boolean; cs_rating?: number; dota_rating?: number; team_memberships?: { is_current: boolean; teams: { name: string; game: string } | null }[] }[]; 
-  game: string; 
+function TopPlayers({
+  title, players, game, color, ratingKey,
+}: {
+  title: string;
+  players: PlayerForTop[];
+  game: string;
   color: string;
   ratingKey: "cs_rating" | "dota_rating";
 }) {
@@ -161,8 +172,27 @@ function TopPlayers({
             const rank = index + 1;
             const rating = player[ratingKey] || 0;
             const dbGame = game === "cs" ? "CS 1.6" : "Dota Allstars";
-            const currentClub = (player.team_memberships || [])
-              .find((m) => m.is_current && m.teams?.game === dbGame);
+            
+            // Klub topish - teams obyekt yoki massiv bo'lishi mumkin
+            const currentMembership = (player.team_memberships || []).find((m) => {
+              if (!m.is_current) return false;
+              const teams = m.teams;
+              if (!teams) return false;
+              if (Array.isArray(teams)) {
+                return teams.some((t) => t.game === dbGame);
+              }
+              return teams.game === dbGame;
+            });
+
+            let teamName: string | null = null;
+            if (currentMembership?.teams) {
+              if (Array.isArray(currentMembership.teams)) {
+                const teamForGame = currentMembership.teams.find((t) => t.game === dbGame);
+                teamName = teamForGame?.name || null;
+              } else {
+                teamName = currentMembership.teams.name;
+              }
+            }
 
             let rankEmoji = "";
             if (rank === 1) rankEmoji = "🥇";
@@ -191,10 +221,8 @@ function TopPlayers({
                     <span className="font-bold truncate">{player.nickname}</span>
                     {player.is_verified && <span className="text-green-400 text-xs">✓</span>}
                   </div>
-                  {currentClub && (
-                    <div className="text-xs text-[#8B92A8] truncate">
-                      {currentClub.teams?.name}
-                    </div>
+                  {teamName && (
+                    <div className="text-xs text-[#8B92A8] truncate">{teamName}</div>
                   )}
                 </div>
 
