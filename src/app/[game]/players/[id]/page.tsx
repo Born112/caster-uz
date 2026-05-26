@@ -10,6 +10,41 @@ const gameMap = {
 
 type Params = Promise<{ game: string; id: string }>;
 
+type TeamData = {
+  id: string;
+  name: string;
+  short_name: string | null;
+  game: string;
+};
+
+type NationalTeamData = {
+  id: string;
+  name: string;
+  region: string;
+  game: string;
+};
+
+type TeamMembershipData = {
+  id: string;
+  is_current: boolean;
+  position: string | null;
+  jersey_number: number | null;
+  role: string;
+  start_date: string;
+  end_date: string | null;
+  teams: TeamData | null;
+};
+
+type NationalMembershipData = {
+  id: string;
+  is_current: boolean;
+  position: string | null;
+  role: string;
+  start_date: string;
+  end_date: string | null;
+  national_teams: NationalTeamData | null;
+};
+
 function formatDate(date: string) {
   return new Date(date).toLocaleDateString("uz-UZ", { day: "2-digit", month: "short", year: "numeric" });
 }
@@ -42,7 +77,6 @@ export default async function PlayerProfilePage({ params }: { params: Params }) 
 
   if (!player.games?.includes(gameInfo.dbValue)) notFound();
 
-  // O'yinchining shu o'yindagi o'rinini hisoblash
   const { data: allPlayers } = await supabase
     .from("players")
     .select("id, cs_rating, dota_rating")
@@ -53,24 +87,24 @@ export default async function PlayerProfilePage({ params }: { params: Params }) 
   const totalPlayers = (allPlayers || []).length;
   const rating = (player[ratingColumn] as number) || 0;
 
-  const teamMemberships = (player.team_memberships || [])
-    .filter((m: { teams: { game: string } | null }) => m.teams?.game === gameInfo.dbValue)
-    .sort((a: { is_current: boolean; start_date: string }, b: { is_current: boolean; start_date: string }) => {
+  const teamMemberships: TeamMembershipData[] = (player.team_memberships || [])
+    .filter((m: TeamMembershipData) => m.teams?.game === gameInfo.dbValue)
+    .sort((a: TeamMembershipData, b: TeamMembershipData) => {
       if (a.is_current && !b.is_current) return -1;
       if (!a.is_current && b.is_current) return 1;
       return b.start_date.localeCompare(a.start_date);
     });
 
-  const nationalMemberships = (player.national_memberships || [])
-    .filter((m: { national_teams: { game: string } | null }) => m.national_teams?.game === gameInfo.dbValue)
-    .sort((a: { is_current: boolean; start_date: string }, b: { is_current: boolean; start_date: string }) => {
+  const nationalMemberships: NationalMembershipData[] = (player.national_memberships || [])
+    .filter((m: NationalMembershipData) => m.national_teams?.game === gameInfo.dbValue)
+    .sort((a: NationalMembershipData, b: NationalMembershipData) => {
       if (a.is_current && !b.is_current) return -1;
       if (!a.is_current && b.is_current) return 1;
       return b.start_date.localeCompare(a.start_date);
     });
 
-  const currentClub = teamMemberships.find((m: { is_current: boolean }) => m.is_current);
-  const currentNationals = nationalMemberships.filter((m: { is_current: boolean }) => m.is_current);
+  const currentClub = teamMemberships.find((m) => m.is_current);
+  const currentNationals = nationalMemberships.filter((m) => m.is_current);
   const otherGames = (player.games || []).filter((g: string) => g !== gameInfo.dbValue);
 
   let rankEmoji = "";
@@ -202,18 +236,14 @@ export default async function PlayerProfilePage({ params }: { params: Params }) 
                     <div className="flex items-center gap-3">
                       <div className="w-12 h-12 rounded-lg flex items-center justify-center font-bold"
                         style={{ backgroundColor: gameInfo.color + "20", color: gameInfo.color }}>
-                        {/* @ts-expect-error - teams is joined */}
                         {currentClub.teams?.short_name || currentClub.teams?.name?.substring(0, 2)}
                       </div>
                       <div>
                         <div className="font-bold text-lg" style={{ color: gameInfo.color }}>
-                          {/* @ts-expect-error - teams is joined */}
                           {currentClub.teams?.name}
                         </div>
                         <div className="text-xs text-[#8B92A8]">
-                          {/* @ts-expect-error - position in db */}
                           {currentClub.position && <span>{currentClub.position}</span>}
-                          {/* @ts-expect-error - jersey_number in db */}
                           {currentClub.jersey_number && <span> · #{currentClub.jersey_number}</span>}
                         </div>
                       </div>
@@ -225,7 +255,7 @@ export default async function PlayerProfilePage({ params }: { params: Params }) 
                   <div>
                     <div className="text-xs text-[#8B92A8] mb-2">🇺🇿 Terma jamoa</div>
                     <div className="space-y-2">
-                      {currentNationals.map((m: { id: string; role: string; position: string | null; national_teams: { name: string; region: string } | null }) => (
+                      {currentNationals.map((m) => (
                         <div key={m.id} className="flex items-center gap-2">
                           <span className="text-2xl">{m.national_teams?.region === "national" ? "🇺🇿" : "🏙️"}</span>
                           <div>
@@ -260,7 +290,7 @@ export default async function PlayerProfilePage({ params }: { params: Params }) 
                   <span style={{ color: gameInfo.color }}>●</span> 🏆 Klub tarixi
                 </h2>
                 <div className="space-y-3">
-                  {teamMemberships.map((m: { id: string; is_current: boolean; position: string | null; jersey_number: number | null; role: string; start_date: string; end_date: string | null; teams: { name: string; short_name: string | null } | null }) => (
+                  {teamMemberships.map((m) => (
                     <div key={m.id} className="rounded-md p-3 border"
                       style={{
                         backgroundColor: m.is_current ? gameInfo.color + "10" : "rgba(255,255,255,0.02)",
@@ -298,7 +328,7 @@ export default async function PlayerProfilePage({ params }: { params: Params }) 
                   <span style={{ color: gameInfo.color }}>●</span> 🇺🇿 Terma jamoa tarixi
                 </h2>
                 <div className="space-y-3">
-                  {nationalMemberships.map((m: { id: string; is_current: boolean; position: string | null; role: string; start_date: string; end_date: string | null; national_teams: { name: string; region: string } | null }) => (
+                  {nationalMemberships.map((m) => (
                     <div key={m.id} className="rounded-md p-3 border"
                       style={{
                         backgroundColor: m.is_current ? "rgba(0,217,255,0.1)" : "rgba(255,255,255,0.02)",
