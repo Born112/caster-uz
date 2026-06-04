@@ -22,6 +22,7 @@ type Tournament = {
   winner: string | null;
   runner_up: string | null;
   third_place: string | null;
+  match_format?: string;
 };
 
 type Props = { mode: "create" | "edit"; tournament?: Tournament };
@@ -31,6 +32,7 @@ export default function TournamentForm({ mode, tournament }: Props) {
   const [description, setDescription] = useState(tournament?.description || "");
   const [game, setGame] = useState(tournament?.game || "CS 1.6");
   const [status, setStatus] = useState(tournament?.status || "upcoming");
+  const [matchFormat, setMatchFormat] = useState(tournament?.match_format || "5v5");
   const [startDate, setStartDate] = useState(tournament?.start_date || "");
   const [endDate, setEndDate] = useState(tournament?.end_date || "");
   const [location, setLocation] = useState(tournament?.location || "");
@@ -53,6 +55,7 @@ export default function TournamentForm({ mode, tournament }: Props) {
 
     const data: TournamentFormData = {
       name, description, game, status,
+      match_format: matchFormat,
       start_date: startDate,
       end_date: endDate,
       location, is_online: isOnline,
@@ -88,53 +91,29 @@ export default function TournamentForm({ mode, tournament }: Props) {
         </h2>
         <div className="space-y-4">
           <Field label="Turnir nomi" required>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-              placeholder="Masalan: Toshkent Cup 2026"
-              className="w-full bg-[#0A0E1A] border border-white/10 focus:border-[#FF6B35] rounded-md px-4 py-2.5 text-white placeholder-[#5A6178] outline-none transition-colors"
-            />
+            <input type="text" value={name} onChange={(e) => setName(e.target.value)} required placeholder="Masalan: Toshkent Cup 2026" className="w-full bg-[#0A0E1A] border border-white/10 focus:border-[#FF6B35] rounded-md px-4 py-2.5 text-white placeholder-[#5A6178] outline-none transition-colors" />
           </Field>
 
           <Field label="Tavsif (ixtiyoriy)">
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Turnir haqida qisqacha..."
-              rows={3}
-              className="w-full bg-[#0A0E1A] border border-white/10 focus:border-[#FF6B35] rounded-md px-4 py-2.5 text-white placeholder-[#5A6178] outline-none transition-colors resize-none"
-            />
+            <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Turnir haqida..." rows={3} className="w-full bg-[#0A0E1A] border border-white/10 focus:border-[#FF6B35] rounded-md px-4 py-2.5 text-white placeholder-[#5A6178] outline-none transition-colors resize-none" />
           </Field>
 
           <div className="grid grid-cols-2 gap-3">
-            <button
-              type="button"
-              onClick={() => setGame("CS 1.6")}
-              className="p-4 rounded-xl border transition-all text-left"
+            <button type="button" onClick={() => setGame("CS 1.6")} className="p-4 rounded-xl border transition-all text-left"
               style={{
                 backgroundColor: game === "CS 1.6" ? "rgba(255,107,53,0.15)" : "rgba(255,255,255,0.02)",
                 borderColor: game === "CS 1.6" ? "#FF6B35" : "rgba(255,255,255,0.1)",
-              }}
-            >
+              }}>
               <div className="text-2xl mb-1">🎯</div>
               <div className="font-bold">CS 1.6</div>
-              <div className="text-xs text-[#8B92A8]">Counter-Strike</div>
             </button>
-
-            <button
-              type="button"
-              onClick={() => setGame("Dota Allstars")}
-              className="p-4 rounded-xl border transition-all text-left"
+            <button type="button" onClick={() => setGame("Dota Allstars")} className="p-4 rounded-xl border transition-all text-left"
               style={{
                 backgroundColor: game === "Dota Allstars" ? "rgba(0,217,255,0.15)" : "rgba(255,255,255,0.02)",
                 borderColor: game === "Dota Allstars" ? "#00D9FF" : "rgba(255,255,255,0.1)",
-              }}
-            >
+              }}>
               <div className="text-2xl mb-1">⚔️</div>
               <div className="font-bold">Dota Allstars</div>
-              <div className="text-xs text-[#8B92A8]">Dota</div>
             </button>
           </div>
         </div>
@@ -142,9 +121,40 @@ export default function TournamentForm({ mode, tournament }: Props) {
 
       <div className="bg-[#131929] border border-white/10 rounded-xl p-6 mb-6">
         <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
+          <span className="text-[#FF6B35]">●</span> Match formati
+        </h2>
+        <p className="text-sm text-[#8B92A8] mb-3">
+          Har jamoada nechta o&apos;yinchi ishtirok etadi?
+        </p>
+        <div className="grid grid-cols-4 gap-2">
+          {[
+            { value: "5v5", label: "5v5", desc: "Klassik" },
+            { value: "3v3", label: "3v3", desc: "Mini" },
+            { value: "2v2", label: "2v2", desc: "Duo" },
+            { value: "1v1", label: "1v1", desc: "Show match" },
+          ].map((f) => (
+            <button
+              key={f.value}
+              type="button"
+              onClick={() => setMatchFormat(f.value)}
+              className="p-3 rounded-md border text-sm font-medium transition-all"
+              style={{
+                backgroundColor: matchFormat === f.value ? "rgba(255,107,53,0.15)" : "rgba(255,255,255,0.02)",
+                borderColor: matchFormat === f.value ? "#FF6B35" : "rgba(255,255,255,0.1)",
+                color: matchFormat === f.value ? "#FF6B35" : "#8B92A8",
+              }}
+            >
+              <div className="font-bold">{f.label}</div>
+              <div className="text-xs opacity-70 mt-0.5">{f.desc}</div>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="bg-[#131929] border border-white/10 rounded-xl p-6 mb-6">
+        <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
           <span className="text-[#FF6B35]">●</span> Holat
         </h2>
-
         <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
           {[
             { value: "upcoming", label: "🟢 Kelajak", color: "#00E676" },
@@ -173,59 +183,29 @@ export default function TournamentForm({ mode, tournament }: Props) {
         <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
           <span className="text-[#FF6B35]">●</span> Sana va joy
         </h2>
-
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <Field label="Boshlanish sanasi" required>
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                required
-                className="w-full bg-[#0A0E1A] border border-white/10 focus:border-[#FF6B35] rounded-md px-4 py-2.5 text-white outline-none transition-colors"
-              />
+              <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} required className="w-full bg-[#0A0E1A] border border-white/10 focus:border-[#FF6B35] rounded-md px-4 py-2.5 text-white outline-none transition-colors" />
             </Field>
-
             <Field label="Tugash sanasi (ixtiyoriy)">
-              <input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="w-full bg-[#0A0E1A] border border-white/10 focus:border-[#FF6B35] rounded-md px-4 py-2.5 text-white outline-none transition-colors"
-              />
+              <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="w-full bg-[#0A0E1A] border border-white/10 focus:border-[#FF6B35] rounded-md px-4 py-2.5 text-white outline-none transition-colors" />
             </Field>
           </div>
 
           <label className="flex items-center gap-3 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={isOnline}
-              onChange={(e) => setIsOnline(e.target.checked)}
-              className="w-5 h-5 accent-[#FF6B35] cursor-pointer"
-            />
+            <input type="checkbox" checked={isOnline} onChange={(e) => setIsOnline(e.target.checked)} className="w-5 h-5 accent-[#FF6B35] cursor-pointer" />
             <span className="font-medium">🌐 Onlayn turnir</span>
           </label>
 
           {!isOnline && (
-            <Field label="Shahar" hint="Offlayn turnir uchun">
-              <input
-                type="text"
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
-                placeholder="Toshkent"
-                className="w-full bg-[#0A0E1A] border border-white/10 focus:border-[#FF6B35] rounded-md px-4 py-2.5 text-white placeholder-[#5A6178] outline-none transition-colors"
-              />
+            <Field label="Shahar">
+              <input type="text" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Toshkent" className="w-full bg-[#0A0E1A] border border-white/10 focus:border-[#FF6B35] rounded-md px-4 py-2.5 text-white placeholder-[#5A6178] outline-none transition-colors" />
             </Field>
           )}
 
           <Field label="Tashkilotchi (ixtiyoriy)">
-            <input
-              type="text"
-              value={organizer}
-              onChange={(e) => setOrganizer(e.target.value)}
-              placeholder="Masalan: Vega Esports"
-              className="w-full bg-[#0A0E1A] border border-white/10 focus:border-[#FF6B35] rounded-md px-4 py-2.5 text-white placeholder-[#5A6178] outline-none transition-colors"
-            />
+            <input type="text" value={organizer} onChange={(e) => setOrganizer(e.target.value)} placeholder="Vega Esports" className="w-full bg-[#0A0E1A] border border-white/10 focus:border-[#FF6B35] rounded-md px-4 py-2.5 text-white placeholder-[#5A6178] outline-none transition-colors" />
           </Field>
         </div>
       </div>
@@ -234,37 +214,15 @@ export default function TournamentForm({ mode, tournament }: Props) {
         <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
           <span className="text-[#FF6B35]">●</span> Statistika
         </h2>
-
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <Field label="Prize fund (so'm)">
-            <input
-              type="number"
-              value={prizeFund}
-              onChange={(e) => setPrizeFund(Number(e.target.value))}
-              min={0}
-              step={100000}
-              className="w-full bg-[#0A0E1A] border border-white/10 focus:border-[#FF6B35] rounded-md px-4 py-2.5 text-white outline-none transition-colors"
-            />
+            <input type="number" value={prizeFund} onChange={(e) => setPrizeFund(Number(e.target.value))} min={0} step={100000} className="w-full bg-[#0A0E1A] border border-white/10 focus:border-[#FF6B35] rounded-md px-4 py-2.5 text-white outline-none transition-colors" />
           </Field>
-
           <Field label="Joriy jamoalar">
-            <input
-              type="number"
-              value={teamsCount}
-              onChange={(e) => setTeamsCount(Number(e.target.value))}
-              min={0}
-              className="w-full bg-[#0A0E1A] border border-white/10 focus:border-[#FF6B35] rounded-md px-4 py-2.5 text-white outline-none transition-colors"
-            />
+            <input type="number" value={teamsCount} onChange={(e) => setTeamsCount(Number(e.target.value))} min={0} className="w-full bg-[#0A0E1A] border border-white/10 focus:border-[#FF6B35] rounded-md px-4 py-2.5 text-white outline-none transition-colors" />
           </Field>
-
           <Field label="Max jamoalar">
-            <input
-              type="number"
-              value={maxTeams}
-              onChange={(e) => setMaxTeams(Number(e.target.value))}
-              min={0}
-              className="w-full bg-[#0A0E1A] border border-white/10 focus:border-[#FF6B35] rounded-md px-4 py-2.5 text-white outline-none transition-colors"
-            />
+            <input type="number" value={maxTeams} onChange={(e) => setMaxTeams(Number(e.target.value))} min={0} className="w-full bg-[#0A0E1A] border border-white/10 focus:border-[#FF6B35] rounded-md px-4 py-2.5 text-white outline-none transition-colors" />
           </Field>
         </div>
       </div>
@@ -273,15 +231,8 @@ export default function TournamentForm({ mode, tournament }: Props) {
         <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
           <span className="text-[#FF6B35]">●</span> Stream linki
         </h2>
-
         <Field label="Stream URL (LIVE bo'lganda)" hint="Twitch yoki YouTube">
-          <input
-            type="url"
-            value={streamUrl}
-            onChange={(e) => setStreamUrl(e.target.value)}
-            placeholder="https://twitch.tv/..."
-            className="w-full bg-[#0A0E1A] border border-white/10 focus:border-[#FF6B35] rounded-md px-4 py-2.5 text-white placeholder-[#5A6178] outline-none transition-colors"
-          />
+          <input type="url" value={streamUrl} onChange={(e) => setStreamUrl(e.target.value)} placeholder="https://twitch.tv/..." className="w-full bg-[#0A0E1A] border border-white/10 focus:border-[#FF6B35] rounded-md px-4 py-2.5 text-white placeholder-[#5A6178] outline-none transition-colors" />
         </Field>
       </div>
 
@@ -290,59 +241,25 @@ export default function TournamentForm({ mode, tournament }: Props) {
           <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
             <span>🏆</span> G&apos;oliblar
           </h2>
-
           <div className="space-y-3">
-            <Field label="🥇 1-o'rin (g'olib)">
-              <input
-                type="text"
-                value={winner}
-                onChange={(e) => setWinner(e.target.value)}
-                placeholder="Jamoa nomi"
-                className="w-full bg-[#0A0E1A] border border-yellow-500/30 focus:border-yellow-500 rounded-md px-4 py-2.5 text-white placeholder-[#5A6178] outline-none transition-colors"
-              />
+            <Field label="🥇 1-o'rin">
+              <input type="text" value={winner} onChange={(e) => setWinner(e.target.value)} placeholder="Jamoa nomi" className="w-full bg-[#0A0E1A] border border-yellow-500/30 focus:border-yellow-500 rounded-md px-4 py-2.5 text-white placeholder-[#5A6178] outline-none transition-colors" />
             </Field>
-
             <Field label="🥈 2-o'rin">
-              <input
-                type="text"
-                value={runnerUp}
-                onChange={(e) => setRunnerUp(e.target.value)}
-                placeholder="Jamoa nomi"
-                className="w-full bg-[#0A0E1A] border border-white/10 focus:border-gray-400 rounded-md px-4 py-2.5 text-white placeholder-[#5A6178] outline-none transition-colors"
-              />
+              <input type="text" value={runnerUp} onChange={(e) => setRunnerUp(e.target.value)} placeholder="Jamoa nomi" className="w-full bg-[#0A0E1A] border border-white/10 focus:border-gray-400 rounded-md px-4 py-2.5 text-white placeholder-[#5A6178] outline-none transition-colors" />
             </Field>
-
             <Field label="🥉 3-o'rin">
-              <input
-                type="text"
-                value={thirdPlace}
-                onChange={(e) => setThirdPlace(e.target.value)}
-                placeholder="Jamoa nomi"
-                className="w-full bg-[#0A0E1A] border border-orange-500/30 focus:border-orange-500 rounded-md px-4 py-2.5 text-white placeholder-[#5A6178] outline-none transition-colors"
-              />
+              <input type="text" value={thirdPlace} onChange={(e) => setThirdPlace(e.target.value)} placeholder="Jamoa nomi" className="w-full bg-[#0A0E1A] border border-orange-500/30 focus:border-orange-500 rounded-md px-4 py-2.5 text-white placeholder-[#5A6178] outline-none transition-colors" />
             </Field>
           </div>
         </div>
       )}
 
       <div className="flex gap-3">
-        <button
-          type="submit"
-          disabled={loading}
-          className="flex-1 bg-[#FF6B35] hover:bg-[#FF8557] disabled:bg-[#FF6B35]/50 disabled:cursor-not-allowed text-[#0A0E1A] font-bold py-3 rounded-md transition-colors flex items-center justify-center gap-2"
-        >
-          {loading ? "Saqlanmoqda..." : (
-            <>
-              <span>{mode === "create" ? "➕" : "💾"}</span>
-              <span>{mode === "create" ? "Turnir qo'shish" : "O'zgarishlarni saqlash"}</span>
-            </>
-          )}
+        <button type="submit" disabled={loading} className="flex-1 bg-[#FF6B35] hover:bg-[#FF8557] disabled:bg-[#FF6B35]/50 disabled:cursor-not-allowed text-[#0A0E1A] font-bold py-3 rounded-md transition-colors flex items-center justify-center gap-2">
+          {loading ? "Saqlanmoqda..." : (<><span>{mode === "create" ? "➕" : "💾"}</span><span>{mode === "create" ? "Turnir qo'shish" : "Saqlash"}</span></>)}
         </button>
-
-        <Link
-          href="/admin/tournaments"
-          className="px-6 py-3 bg-white/5 hover:bg-white/10 border border-white/10 text-white font-medium rounded-md transition-colors flex items-center"
-        >
+        <Link href="/admin/tournaments" className="px-6 py-3 bg-white/5 hover:bg-white/10 border border-white/10 text-white font-medium rounded-md transition-colors flex items-center">
           Bekor qilish
         </Link>
       </div>

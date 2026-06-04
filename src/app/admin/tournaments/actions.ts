@@ -9,6 +9,7 @@ export type TournamentFormData = {
   description: string;
   game: string;
   status: string;
+  match_format: string;
   start_date: string;
   end_date: string;
   location: string;
@@ -25,10 +26,7 @@ export type TournamentFormData = {
 
 async function checkAdmin() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
+  const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Tizimga kirish kerak" };
 
   const { data: profile } = await supabase
@@ -57,6 +55,7 @@ export async function createTournament(data: TournamentFormData) {
     description: data.description.trim() || null,
     game: data.game,
     status: data.status,
+    match_format: data.match_format,
     start_date: data.start_date,
     end_date: data.end_date || null,
     location: data.location.trim() || null,
@@ -96,6 +95,7 @@ export async function updateTournament(id: string, data: TournamentFormData) {
       description: data.description.trim() || null,
       game: data.game,
       status: data.status,
+      match_format: data.match_format,
       start_date: data.start_date,
       end_date: data.end_date || null,
       location: data.location.trim() || null,

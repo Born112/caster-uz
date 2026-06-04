@@ -83,7 +83,6 @@ export default async function GameTournamentsPage({ params }: { params: Params }
           <div className="bg-[#131929] rounded-xl p-12 text-center">
             <div className="text-5xl mb-4">🏆</div>
             <h3 className="text-xl font-bold mb-2">Hozircha turnirlar yo&apos;q</h3>
-            <p className="text-[#8B92A8]">Tez orada qo&apos;shamiz!</p>
           </div>
         )}
 
@@ -92,9 +91,10 @@ export default async function GameTournamentsPage({ params }: { params: Params }
             {tournaments.map((tournament) => {
               const status = statusConfig[tournament.status as keyof typeof statusConfig];
               return (
-                <div
+                <Link
                   key={tournament.id}
-                  className="bg-[#131929] border rounded-xl p-6 transition-all hover:-translate-y-1"
+                  href={"/" + game + "/tournaments/" + tournament.id}
+                  className="bg-[#131929] border rounded-xl p-6 transition-all hover:-translate-y-1 block"
                   style={{
                     borderColor: tournament.status === "live" ? "rgba(255,61,113,0.3)" : "rgba(255,255,255,0.1)",
                   }}
@@ -111,21 +111,23 @@ export default async function GameTournamentsPage({ params }: { params: Params }
                           )}
                           {status.label}
                         </span>
+                        {tournament.match_format && (
+                          <span className="text-xs font-bold px-2 py-1 rounded-md bg-white/5 text-white">
+                            {tournament.match_format}
+                          </span>
+                        )}
                       </div>
 
                       <h3 className="text-2xl font-bold mb-2">{tournament.name}</h3>
 
                       {tournament.description && (
-                        <p className="text-sm text-gray-300 mb-4">{tournament.description}</p>
+                        <p className="text-sm text-gray-300 mb-4 line-clamp-2">{tournament.description}</p>
                       )}
 
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
                         <div>
                           <div className="text-xs text-[#8B92A8] mb-1">📅 Sana</div>
                           <div className="font-medium">{formatDate(tournament.start_date)}</div>
-                          {tournament.end_date && (
-                            <div className="text-xs text-[#8B92A8]">— {formatDate(tournament.end_date)}</div>
-                          )}
                         </div>
                         <div>
                           <div className="text-xs text-[#8B92A8] mb-1">📍 Joy</div>
@@ -177,19 +179,21 @@ export default async function GameTournamentsPage({ params }: { params: Params }
                       )}
                     </div>
 
-                    {tournament.status === "live" && tournament.stream_url && (
-                      <a
-                        href={tournament.stream_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="bg-red-500 hover:bg-red-600 text-white font-bold px-5 py-3 rounded-md transition-colors flex items-center gap-2 shrink-0"
-                      >
-                        <span>📺</span>
-                        <span>Tomosha</span>
-                      </a>
-                    )}
+                    <div className="flex flex-col gap-2 shrink-0">
+                      {tournament.status === "live" && tournament.stream_url && (
+                        <span
+                          className="bg-red-500 text-white font-bold px-5 py-3 rounded-md flex items-center gap-2"
+                        >
+                          <span>📺</span>
+                          <span>LIVE</span>
+                        </span>
+                      )}
+                      <span className="text-xs text-[#8B92A8] text-center">
+                        Batafsil →
+                      </span>
+                    </div>
                   </div>
-                </div>
+                </Link>
               );
             })}
           </div>

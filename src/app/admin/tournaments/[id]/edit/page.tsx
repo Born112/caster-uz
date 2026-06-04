@@ -3,6 +3,7 @@ import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import LogoutButton from "../../../LogoutButton";
 import TournamentForm from "../../TournamentForm";
+import TournamentEditTabs from "./TournamentEditTabs";
 
 type Params = Promise<{ id: string }>;
 
@@ -15,8 +16,44 @@ export default async function EditTournamentPage({ params }: { params: Params })
   const { data: profile } = await supabase.from("profiles").select("is_admin").eq("id", user.id).single();
   if (!profile?.is_admin) redirect("/");
 
-  const { data: tournament, error } = await supabase.from("tournaments").select("*").eq("id", id).single();
+  const { data: tournament, error } = await supabase
+    .from("tournaments")
+    .select("*")
+    .eq("id", id)
+    .single();
+
   if (error || !tournament) notFound();
+
+  // Rosterlar
+  const { data: rosters } = await supabase
+    .from("tournament_rosters")
+    .select(`
+      id, seed, status,
+      teams(id, name, short_name, game),
+      tournament_roster_players(
+        id, role, position,
+        players(id, nickname, real_name, games)
+      )
+    `)
+    .eq("tournament_id", id);
+
+  // Barcha jamoalar
+  const { data: allTeams } = await supabase
+    .from("teams")
+    .select("id, name, short_name, game")
+    .eq("game", tournament.game)
+    .order("name");
+
+  // Matchlar
+  const { data: matches } = await supabase
+    .from("matches")
+    .select(`
+      id, team1_roster_id, team2_roster_id, best_of, status, stage, scheduled_at,
+      team1_score, team2_score, winner_roster_id,
+      match_maps(id, map_number, map_name, team1_side, team2_side, team1_score, team2_score, winner_roster_id, status)
+    `)
+    .eq("tournament_id", id)
+    .order("scheduled_at", { ascending: true, nullsFirst: false });
 
   return (
     <main className="min-h-screen bg-[#0A0E1A] text-white">
@@ -55,7 +92,24 @@ export default async function EditTournamentPage({ params }: { params: Params })
           </h1>
         </div>
 
-        <TournamentForm mode="edit" tournament={tournament} />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2">
+            <TournamentForm mode="edit" tournament={tournament} />
+          </div>
+
+          <div className="lg:col-span-1">
+            <div className="sticky top-6">
+              <TournamentEditTabs
+                tournamentId={tournament.id}
+                tournamentGame={tournament.game}
+                matchFormat={tournament.match_format || "5v5"}
+                rosters={(rosters as unknown as Parameters<typeof TournamentEditTabs>[0]["rosters"]) || []}
+                allTeams={allTeams || []}
+                matches={(matches as unknown as Parameters<typeof TournamentEditTabs>[0]["matches"]) || []}
+              />
+            </div>
+          </div>
+        </div>
       </div>
     </main>
   );
